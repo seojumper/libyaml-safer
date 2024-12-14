@@ -31,6 +31,8 @@ pub struct Emitter<'w> {
     pub(crate) canonical: bool,
     /// The number of indentation spaces.
     pub(crate) best_indent: i32,
+    /// The numder of sequence indentation spaces.
+    pub(crate) best_sequence_indent: i32,
     /// The preferred width of the output lines.
     pub(crate) best_width: i32,
     /// Allow unescaped non-ASCII characters?
@@ -183,6 +185,7 @@ impl<'w> Emitter<'w> {
             encoding: Encoding::Any,
             canonical: false,
             best_indent: 0,
+            best_sequence_indent: 0,
             best_width: 0,
             unicode: false,
             line_break: Break::default(),
@@ -276,6 +279,11 @@ impl<'w> Emitter<'w> {
     /// Set the indentation increment.
     pub fn set_indent(&mut self, indent: i32) {
         self.best_indent = if 1 < indent && indent < 10 { indent } else { 2 };
+    }
+
+    /// Set sequence indentaiton increment.
+    pub fn set_sequence_indent(&mut self, indent: i32) {
+        self.best_sequence_indent = if 1 < indent && indent < 10 { indent } else { 0 };
     }
 
     /// Set the preferred line width. -1 means unlimited.
@@ -450,6 +458,16 @@ impl<'w> Emitter<'w> {
             self.indent = if flow { self.best_indent } else { 0 };
         } else if !indentless {
             self.indent += self.best_indent;
+        } else {
+            if self.best_sequence_indent > 0 {
+                match self.state {
+                    EmitterState::BlockSequenceFirstItem
+                    | EmitterState::BlockSequenceItem
+                    | EmitterState::FlowSequenceFirstItem
+                    | EmitterState::FlowSequenceItem => self.indent += self.best_sequence_indent,
+                    _ => {}
+                }
+            }
         }
     }
 
